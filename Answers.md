@@ -1,9 +1,9 @@
 ## Exercise 1
-(a) true, 6 and dropped
+(a) Messages 3, 5, and 7 (`3: true`, `5: 6`, `7: "dropped"`).
 
-(b) Course must have "removeStudent(Student)" and "getCredits() and UndergraduateStudent must have "removeCredits()"
+(b) `Course` must have `removeStudent(student)` (message 2) and `getCredits()` (message 4). `UndergraduateStudent` must have `removeCredits(amount)` (message 6).
 
-(c) What will happen is an error. I would add the fragment alt and put the message [isEnrolled]
+(c) As drawn, there is no check stopping the flow, so messages 4, 5, and 6 still run and 6 credits are still removed from the student even though they were never enrolled. I would add an `opt` fragment (guard: `student was removed`) around messages 4, 5, and 6.
 
 ## Exercise 2
 
@@ -120,7 +120,7 @@ Sentence from the requirements|Fragment|
             participant W as waitlist: Waitlist
             Registrar->>S: promote(course, waitlist) 
             S->>C: hasSeatLeft()
-            C-->S: seatLeft?       
+            C-->>S: seatLeft?       
             break no seat left
                  S-->>Registrar: undefined   
             end
@@ -135,7 +135,7 @@ Sentence from the requirements|Fragment|
 ``` 
 # Exercise 10
 
-```typescript ...
+```typescript
 enrollAll(student: Student, courses: Course[]): number {
       let acceptedCount = 0;
        for (const course of courses) {
@@ -149,13 +149,34 @@ enrollAll(student: Student, courses: Course[]): number {
       return acceptedCount;
     }
 ```
-#   Exercise 11
+# Exercise 11
+
+1. Mistakes table:
 
 |\#|Line of the diagram|What is wrong|Correction|
 |---|---|---|---|
-|1|6|line 6 should come after isOpen()|S->>C: isOpen()
-S->>E: new Enrollment(student, course)|
-|2|8|C->>S wrong arrow used|C-->>S|
-|3|10|S->>C: seats = seats - 1 direct method assumption|S->>C: addStudent(Student)|
+|1|`S->>E: new Enrollment(student, course)` (with `create participant E as enrollment: Enrollment`)|`enrollment` is created before checking `isOpen()`|Check `isOpen()` first and only create `enrollment` when the course is open|
+|2|`C->>S: true`|Uses a solid call arrow (`->>`) instead of a dashed return arrow (`-->>`)|`C-->>S: open?`|
+|3|`S->>C: seats = seats - 1`|Direct field mutation instead of a method call|`S->>C: addStudent(student)`|
+
+2. Corrected diagram:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant S as service: EnrollmentService
+    participant C as course: Course
+    User->>S: enroll(student, course)
+    S->>C: isOpen()
+    C-->>S: open?
+    alt course is open
+        S->>C: addStudent(student)
+        create participant E as enrollment: Enrollment
+        S->>E: new Enrollment(student, course)
+        S-->>User: enrollment
+    else course is closed
+        S-->>User: undefined
+    end
+```
 
 
